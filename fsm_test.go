@@ -8,73 +8,98 @@ import (
 
 func TestMatchString(t *testing.T) {
 	testCases := []struct {
-		name, input, regex string
+		name, regex, input string
 	}{
 		{
 			name:  "empty input",
-			input: "",
 			regex: "abc",
+			input: "",
 		},
 		{
 			name:  "empty regex",
-			input: "abc",
 			regex: "",
+			input: "abc",
 		},
 		{
 			name:  "no match",
-			input: "abc",
 			regex: "xxx",
+			input: "abc",
 		},
 		{
 			name:  "partial match",
-			input: "abc",
 			regex: "ab",
+			input: "abc",
 		},
 		{
 			name:  "match",
-			input: "abc",
 			regex: "abc",
+			input: "abc",
 		},
 		{
 			name:  "nested",
-			input: "abdc",
 			regex: "a(b(d))c",
+			input: "abdc",
 		},
 		{
 			name:  "substring match with reset",
-			input: "aaA",
 			regex: "aA",
+			input: "aaA",
 		},
 		{
 			name:  "substring match without reset",
-			input: "ABA",
 			regex: "B",
+			input: "ABA",
 		},
 		{
 			name:  "multi byte",
-			input: "Ȥ",
 			regex: "Ȥ",
+			input: "Ȥ",
 		},
 		{
 			name:  "complex multibyte characters",
-			input: string([]byte{0xef, 0xbf, 0xbd, 0x30}),
 			regex: string([]byte{0xcc, 0x87, 0x30}),
+			input: string([]byte{0xef, 0xbf, 0xbd, 0x30}),
 		},
 		// wildcards
 		{
 			name:  "wildcard matching",
-			input: "abc",
 			regex: "ab.",
+			input: "abc",
 		},
 		{
 			name:  "wildcard not matching",
-			input: "ab",
 			regex: "ab.",
+			input: "ab",
 		},
 		{
 			name:  "wildcard with new lines",
-			input: "0\n0",
 			regex: "..0",
+			input: "0\n0",
+		},
+		{
+			name:  "branch matches first",
+			regex: "ab|cd",
+			input: "ab",
+		},
+		{
+			name:  "branch matches last",
+			regex: "ab|cd",
+			input: "cd",
+		},
+		{
+			name:  "branch no match",
+			regex: "ab|cd",
+			input: "xx",
+		},
+		{
+			name:  "branch with shared chars",
+			regex: "dog|dot",
+			input: "dog",
+		},
+		{
+			name:  "branch with shared chars",
+			regex: "dog|dot",
+			input: "dot",
 		},
 	}
 	for _, tt := range testCases {

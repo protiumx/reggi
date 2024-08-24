@@ -9,7 +9,8 @@ func NewParser(tokens []token) *Parser {
 }
 
 func (p Parser) Parse() Node {
-	root := Group{}
+	var root CompositeNode
+	root = &Group{}
 
 	for _, t := range p.tokens {
 		switch t.symbol {
@@ -17,8 +18,15 @@ func (p Parser) Parse() Node {
 			root.Append(&CharLiteral{Char: t.char})
 		case AnyChar:
 			root.Append(&Wildcard{})
+		case Pipe:
+			switch r := root.(type) {
+			case *Branch:
+				r.Split()
+			default:
+				root = &Branch{Nodes: []Node{root, &Group{}}}
+			}
 		}
 	}
 
-	return &root
+	return root
 }

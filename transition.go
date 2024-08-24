@@ -17,7 +17,7 @@ func (p *Predicate) test(in rune) bool {
 	}
 
 	if p.disallowed != "" {
-		return !strings.ContainsRune(p.allowed, in)
+		return !strings.ContainsRune(p.disallowed, in)
 	}
 
 	return false

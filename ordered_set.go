@@ -35,3 +35,7 @@ func (o *OrderedSet[T]) list() []T {
 func (o *OrderedSet[T]) index(v T) int {
 	return o.set[v]
 }
+
+func (o *OrderedSet[T]) size() int {
+	return len(o.set)
+}

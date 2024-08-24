@@ -6,6 +6,7 @@ type Reggi struct {
 }
 
 type DebugStep struct {
+	Info         string
 	Snapshot     string
 	Status       Status
 	CurrentIndex int
@@ -42,37 +43,41 @@ func (r *Reggi) DebugMatch(input string) []DebugStep {
 }
 
 func match(r *Runner, input []rune, debugCh chan DebugStep, offset int) bool {
-	if debugCh != nil {
-		debugCh <- DebugStep{Snapshot: r.snapshot(), CurrentIndex: offset, Offset: offset, Status: r.status()}
-	}
-
 	r.Reset()
+
+	if debugCh != nil {
+		debugCh <- DebugStep{
+			Snapshot:     r.snapshot(),
+			Info:         r.info(),
+			CurrentIndex: offset,
+			Offset:       offset,
+			Status:       r.status(),
+		}
+	}
 
 	for i, char := range input {
 		r.Next(char)
 
 		status := r.status()
+		step := DebugStep{
+			Snapshot:     r.snapshot(),
+			Info:         r.info(),
+			Offset:       offset,
+			CurrentIndex: offset + i + 1,
+			Status:       status,
+		}
+
+		if debugCh != nil {
+			debugCh <- step
+		}
 
 		if status == StatusFail {
 			return match(r, input[1:], debugCh, offset+1)
 		}
 
-		step := DebugStep{
-			Snapshot:     r.snapshot(),
-			Offset:       offset,
-			CurrentIndex: offset + i,
-			Status:       status,
-		}
-
-		step.CurrentIndex++
 		// greedy match
 		if status == StatusSuccess {
-			debugCh <- step
 			return true
-		}
-
-		if debugCh != nil {
-			debugCh <- step
 		}
 	}
 

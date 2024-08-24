@@ -12,14 +12,15 @@ type State struct {
 	transitions []Transition
 }
 
-func (s *State) firstMatchingTransition(input rune) *State {
+func (s *State) matchingTransitions(input rune) []*State {
+	var res []*State
 	for _, t := range s.transitions {
 		if t.predicate.test(input) {
-			return t.to
+			res = append(res, t.to)
 		}
 	}
 
-	return nil
+	return res
 }
 
 func (s *State) addTransition(to *State, predicate Predicate, debugSym string) {

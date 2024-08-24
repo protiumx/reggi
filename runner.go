@@ -1,33 +1,42 @@
 package reggi
 
 type Runner struct {
-	root    *State
-	current *State
+	root         *State
+	activeStates Set[*State]
 }
 
 func NewRunner(root *State) *Runner {
-	return &Runner{root: root, current: root}
+	return &Runner{root: root, activeStates: NewSet(root)}
 }
 
 func (r *Runner) Next(input rune) {
-	if r.current == nil {
+	if r.activeStates.size() == 0 {
 		return
 	}
 
-	r.current = r.current.firstMatchingTransition(input)
+	nextActiveStates := Set[*State]{}
+	for state := range r.activeStates {
+		for _, nextState := range state.matchingTransitions(input) {
+			nextActiveStates.add(nextState)
+		}
+	}
+
+	r.activeStates = nextActiveStates
 }
 
 func (r *Runner) Reset() {
-	r.current = r.root
+	r.activeStates = NewSet(r.root)
 }
 
 func (r *Runner) status() Status {
-	if r.current == nil {
+	if r.activeStates.size() == 0 {
 		return StatusFail
 	}
 
-	if r.current.isSuccess() {
-		return StatusSuccess
+	for state := range r.activeStates {
+		if state.isSuccess() {
+			return StatusSuccess
+		}
 	}
 
 	return StatusNormal
