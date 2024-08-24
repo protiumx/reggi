@@ -73,8 +73,6 @@ func (r *Runner) buildLines() []string {
 
 		// handle leaf node, i.e. node without transitions
 		if len(node.transitions) == 0 {
-			nodeID++
-
 			leaf := fmt.Sprintf("(%d)", nodeID)
 			if r.activeStates.has(node) {
 				leaf = StatusStyle(status, leaf)
@@ -87,6 +85,7 @@ func (r *Runner) buildLines() []string {
 				lines = append(lines, strings.Repeat(" ", 5)+"\\")
 			}
 
+			nodeID++
 			continue
 		}
 

@@ -28,6 +28,10 @@ func (r *Runner) Reset() {
 	r.activeStates = NewSet(r.root)
 }
 
+func (r *Runner) Start() {
+	r.activeStates.add(r.root)
+}
+
 func (r *Runner) status() Status {
 	if r.activeStates.size() == 0 {
 		return StatusFail
