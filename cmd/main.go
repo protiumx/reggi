@@ -32,25 +32,32 @@ func (m *model) Init() tea.Cmd {
 
 func (m *model) View() string {
 	step := m.steps[m.step]
-	text := strings.Split(m.input, "")
 	last := m.step == len(m.steps)-1
 
 	if last && step.Status != reggi.StatusSuccess {
-		for i := range text {
-			text[i] = reggi.FailStyle.Render(text[i])
-		}
-
-		return m.render(text, step, last)
+		input := reggi.FailStyle.Render(m.input)
+		return m.render(strings.Split(input, ""), step, last)
 	}
 
+	text := strings.Split(m.input, "")
+
+	// color the discarded chars as failed
 	for i := 0; i < step.Offset; i++ {
 		text[i] = reggi.FailStyle.Render(text[i])
 	}
 
+	if step.Status == reggi.StatusFail {
+		// color last tried
+		text[step.Offset] = reggi.FailStyle.Render(text[step.Offset])
+		return m.render(text, step, last)
+	}
+
+	// char between the offset and current index have matched
 	for i := step.Offset; i < step.CurrentIndex; i++ {
 		text[i] = reggi.SuccessStyle.Render(text[i])
 	}
 
+	// color the current char if withing the input
 	if step.CurrentIndex < len(text) {
 		text[step.CurrentIndex] = reggi.SymbolStyle.Render(text[step.CurrentIndex])
 	}
@@ -63,19 +70,11 @@ func (m *model) View() string {
 }
 
 func (m *model) render(text []string, step reggi.DebugStep, last bool) string {
-	inputInfo := fmt.Sprintf("input: %q\tregex: %q", m.input, m.regex)
-	stepInfo := fmt.Sprintf("\tstep: %d/%d\n\n", m.step+1, len(m.steps))
+	inputInfo := fmt.Sprintf("[input: %q]  [regex: %s]", m.input, reggi.SuccessStyle.Render(m.regex))
+	stepInfo := fmt.Sprintf("[step: %d/%d]", m.step+1, len(m.steps))
 	stateInfo := strings.Join(text, "  ") + "\n" + step.Snapshot
 
-	if last {
-		result := resultMatch
-		if step.Status != reggi.StatusSuccess {
-			result = resultNoMatch
-		}
-		stateInfo += " - " + result
-	}
-
-	return inputInfo + stepInfo + stateInfo + "\n\n" + help
+	return inputInfo + "  " + stepInfo + "\n" + step.Info + "\n\n" + stateInfo + "\n\n" + help
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

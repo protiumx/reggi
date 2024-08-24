@@ -1,7 +1,8 @@
 package reggi
 
 import (
-	"strconv"
+	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -20,9 +21,11 @@ var FailStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("9"))
 
 var SymbolStyle = lipgloss.NewStyle().
+	Underline(true).
 	Bold(true).
 	Foreground(lipgloss.Color("111"))
 
+// depth-first traversal
 func visitNodes(node *State, transitions *OrderedSet[Transition], visited *OrderedSet[*State]) {
 	if visited.has(node) {
 		return
@@ -50,33 +53,92 @@ func StatusStyle(status Status, s string) string {
 }
 
 func (r *Runner) snapshot() string {
-	s := r.root
-	transitions := OrderedSet[Transition]{}
-	nodes := OrderedSet[*State]{}
+	return strings.Join(r.buildLines(), "\n")
+}
 
-	visitNodes(s, &transitions, &nodes)
+// buildLines traverses the states in depth-first order and builds the output line by line
+// accounting for padding and final states
+func (r *Runner) buildLines() []string {
+	lines := make([]string, 1)
+	stack := []*State{r.root}
+	nodeID := 0
+	currentLine := 0
 
 	status := r.status()
-	out := make([]string, 0, len(nodes.set))
 
-	for i, t := range transitions.list() {
-		from, to := nodes.index(t.from), nodes.index(t.to)
+	for len(stack) > 0 {
+		last := len(stack) - 1
+		node := stack[last]
+		stack = stack[:last]
 
-		fromStr := "(" + strconv.Itoa(from) + ")"
-		toStr := "(" + strconv.Itoa(to) + ")"
+		// handle leaf node, i.e. node without transitions
+		if len(node.transitions) == 0 {
+			nodeID++
 
-		// account for initial or current state
-		if (i == 0 && status == StatusFail) || t.from == r.current {
-			fromStr = StatusStyle(status, fromStr)
-		} else if t.to == r.current {
-			toStr = StatusStyle(status, toStr)
+			leaf := fmt.Sprintf("(%d)", nodeID)
+			if r.activeStates.has(node) {
+				leaf = StatusStyle(status, leaf)
+			}
+			lines[currentLine] += "--" + leaf
+
+			// we don't want an extra empty line if there no more nodes
+			if len(stack) > 0 {
+				currentLine++
+				lines = append(lines, strings.Repeat(" ", 5)+"\\")
+			}
+
+			continue
 		}
 
-		out = append(out, fromStr+"--"+SymbolStyle.Render(t.debugSym))
-		if i == len(transitions.set)-1 {
-			out = append(out, toStr)
+		// handle node connection
+		if lines[currentLine] != "" {
+			lines[currentLine] += "--"
 		}
+
+		current := fmt.Sprintf("(%d)", nodeID)
+
+		// handle node coloring
+		if r.activeStates.has(node) {
+			current = StatusStyle(status, current)
+		}
+
+		lines[currentLine] += current + "--" + node.transitions[0].debugSym
+
+		for i := len(node.transitions) - 1; i >= 0; i-- {
+			stack = append(stack, node.transitions[i].to)
+		}
+
+		nodeID++
 	}
 
-	return strings.Join(out, "--")
+	return lines
+}
+
+func (r *Runner) info() string {
+	status := r.status()
+	if status == StatusFail {
+		return FailStyle.Render("Failed")
+	}
+
+	if status == StatusSuccess {
+		return SuccessStyle.Render("Matched")
+	}
+
+	symbols := ""
+	for i, s := range r.activeStates.list() {
+		if i > 0 {
+			symbols += ", "
+		}
+		symbols += s.transitions[0].debugSym
+	}
+
+	return fmt.Sprintf("Trying %s", SuccessStyle.Render(symbols))
+}
+
+func sortVisitedStates(states []*State, nodes OrderedSet[*State]) []*State {
+	sort.Slice(states, func(i, j int) bool {
+		return nodes.index(states[i]) < nodes.index(states[j])
+	})
+
+	return states
 }
