@@ -10,13 +10,14 @@ import (
 	reggi "protiumx.dev/reggi"
 )
 
-var help = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("248")).
-	Render("h - prev transition\nl - next transition")
-
 var (
-	resultMatch   = reggi.SuccessStyle.Render("match")
-	resultNoMatch = reggi.SuccessStyle.Render("no match")
+	help = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("248")).
+		Render("h - prev transition\nl - next transition")
+
+	infoMatched = reggi.SuccessStyle.Render("Matched")
+	infoFail    = reggi.FailStyle.Render("Failed")
+	infoEOF     = reggi.FailStyle.Render("Regex failed to match")
 )
 
 type model struct {
@@ -33,37 +34,26 @@ func (m *model) Init() tea.Cmd {
 func (m *model) View() string {
 	step := m.steps[m.step]
 	last := m.step == len(m.steps)-1
-
-	if last && step.Status != reggi.StatusSuccess {
-		input := reggi.FailStyle.Render(m.input)
-		return m.render(strings.Split(input, ""), step, last)
-	}
-
 	text := strings.Split(m.input, "")
 
-	// color the discarded chars as failed
+	// color the discarded chars
 	for i := 0; i < step.Offset; i++ {
 		text[i] = reggi.FailStyle.Render(text[i])
 	}
 
 	if step.Status == reggi.StatusFail {
-		// color last tried
 		text[step.Offset] = reggi.FailStyle.Render(text[step.Offset])
 		return m.render(text, step, last)
 	}
 
-	// char between the offset and current index have matched
+	// chars between the offset and current index have matched
 	for i := step.Offset; i < step.CurrentIndex; i++ {
 		text[i] = reggi.SuccessStyle.Render(text[i])
 	}
 
-	// color the current char if withing the input
 	if step.CurrentIndex < len(text) {
+		// Color the current char
 		text[step.CurrentIndex] = reggi.SymbolStyle.Render(text[step.CurrentIndex])
-	}
-
-	if last {
-		text[len(text)-1] = reggi.StatusStyle(step.Status, text[len(text)-1])
 	}
 
 	return m.render(text, step, last)
@@ -74,7 +64,19 @@ func (m *model) render(text []string, step reggi.DebugStep, last bool) string {
 	stepInfo := fmt.Sprintf("[step: %d/%d]", m.step+1, len(m.steps))
 	stateInfo := strings.Join(text, "  ") + "\n" + step.Snapshot
 
-	return inputInfo + "  " + stepInfo + "\n" + step.Info + "\n\n" + stateInfo + "\n\n" + help
+	info := infoMatched
+	if step.Status != reggi.StatusSuccess {
+		switch {
+		case step.Status == reggi.StatusFail:
+			info = infoFail
+		case last:
+			info = infoEOF
+		default:
+			info = "Trying: " + reggi.SuccessStyle.Render(step.ActiveSymbols)
+		}
+	}
+
+	return inputInfo + "  " + stepInfo + "\n" + info + "\n\n" + stateInfo + "\n\n" + help
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

@@ -71,56 +71,52 @@ func (r *Runner) buildLines() []string {
 		node := stack[last]
 		stack = stack[:last]
 
-		// handle leaf node, i.e. node without transitions
-		if len(node.transitions) == 0 {
-			leaf := fmt.Sprintf("(%d)", nodeID)
-			if r.activeStates.has(node) {
-				leaf = StatusStyle(status, leaf)
-			}
-			lines[currentLine] += "--" + leaf
-
-			// we don't want an extra empty line if there no more nodes
-			if len(stack) > 0 {
-				currentLine++
-				lines = append(lines, strings.Repeat(" ", 5)+"\\")
-			}
-
-			nodeID++
-			continue
-		}
-
-		// handle node connection
-		if lines[currentLine] != "" {
-			lines[currentLine] += "--"
-		}
-
 		current := fmt.Sprintf("(%d)", nodeID)
-
-		// handle node coloring
+		// color if active
 		if r.activeStates.has(node) {
 			current = StatusStyle(status, current)
 		}
 
-		lines[currentLine] += current + "--" + node.transitions[0].debugSym
+		// handle node connection (from)--(to)
+		if lines[currentLine] != "" {
+			lines[currentLine] += "--"
+		}
+		lines[currentLine] += current
+		nodeID++
 
-		for i := len(node.transitions) - 1; i >= 0; i-- {
-			stack = append(stack, node.transitions[i].to)
+		// handle leaf node, i.e. node without transitions
+		if len(node.transitions) == 0 {
+			// we will process the next level
+			currentLine++
+			continue
 		}
 
-		nodeID++
+		// cater space for all levels
+		for len(lines) < len(node.transitions) {
+			lines = append(lines, "")
+		}
+
+		for i := len(node.transitions) - 1; i >= 0; i-- {
+			// draw in the correct level
+			c := currentLine + i
+			t := node.transitions[i]
+
+			// connect to parent
+			if i > 0 && lines[c] == "" {
+				lines[i] += "  \\"
+			}
+
+			lines[c] += "--" + t.debugSym
+			stack = append(stack, t.to)
+		}
 	}
 
 	return lines
 }
 
-func (r *Runner) info() string {
-	status := r.status()
-	if status == StatusFail {
-		return FailStyle.Render("Failed")
-	}
-
-	if status == StatusSuccess {
-		return SuccessStyle.Render("Matched")
+func (r *Runner) activeSymbols() string {
+	if r.status() != StatusNormal {
+		return ""
 	}
 
 	symbols := ""
@@ -131,7 +127,7 @@ func (r *Runner) info() string {
 		symbols += s.transitions[0].debugSym
 	}
 
-	return fmt.Sprintf("Trying %s", SuccessStyle.Render(symbols))
+	return symbols
 }
 
 func sortVisitedStates(states []*State, nodes OrderedSet[*State]) []*State {

@@ -6,11 +6,11 @@ type Reggi struct {
 }
 
 type DebugStep struct {
-	Info         string
-	Snapshot     string
-	Status       Status
-	CurrentIndex int
-	Offset       int
+	ActiveSymbols string
+	Snapshot      string
+	Status        Status
+	CurrentIndex  int
+	Offset        int
 }
 
 func NewReggi(regex string) *Reggi {
@@ -47,24 +47,25 @@ func match(r *Runner, input []rune, debugCh chan DebugStep, offset int) bool {
 
 	if debugCh != nil {
 		debugCh <- DebugStep{
-			Snapshot:     r.snapshot(),
-			Info:         r.info(),
-			CurrentIndex: offset,
-			Offset:       offset,
-			Status:       r.status(),
+			Snapshot:      r.snapshot(),
+			ActiveSymbols: r.activeSymbols(),
+			CurrentIndex:  offset,
+			Offset:        offset,
+			Status:        r.status(),
 		}
 	}
 
 	for i, char := range input {
 		r.Next(char)
+		// r.Start()
 
 		status := r.status()
 		step := DebugStep{
-			Snapshot:     r.snapshot(),
-			Info:         r.info(),
-			Offset:       offset,
-			CurrentIndex: offset + i + 1,
-			Status:       status,
+			Snapshot:      r.snapshot(),
+			ActiveSymbols: r.activeSymbols(),
+			Offset:        offset,
+			CurrentIndex:  offset + i + 1,
+			Status:        status,
 		}
 
 		if debugCh != nil {

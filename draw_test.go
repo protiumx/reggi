@@ -27,7 +27,13 @@ func Test_Snapshot(t *testing.T) {
 			name:      "branches",
 			input:     "abc",
 			rootState: regexFSM("ab|ac"),
-			expected:  "(0)--a--(1)--b--(2)\n     \\--(3)--c--(4)",
+			expected:  "(0)--a--(1)--b--(2)\n  \\--a--(3)--c--(4)",
+		},
+		{
+			name:      "branches",
+			input:     "aaa",
+			rootState: regexFSM("a|b|c"),
+			expected:  "(0)--a--(1)\n  \\--b--(2)\n  \\--c--(3)",
 		},
 	}
 
